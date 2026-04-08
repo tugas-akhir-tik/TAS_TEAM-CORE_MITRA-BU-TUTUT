@@ -78,6 +78,22 @@ function normalizeData(x){
   return [];
 }
 
+function showMessage(text, type='info', timeout=8000){
+  let el = document.getElementById('appMessage');
+  if(!el){
+    el = document.createElement('div'); el.id = 'appMessage';
+    el.style.position = 'fixed'; el.style.left='12px'; el.style.right='12px'; el.style.bottom='86px'; el.style.zIndex=9999; el.style.padding='10px 12px'; el.style.borderRadius='10px'; el.style.boxShadow='0 8px 24px rgba(0,0,0,0.12)'; el.style.fontWeight=700; el.style.display='flex'; el.style.justifyContent='space-between'; el.style.alignItems='center';
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  if(type==='error') el.style.background='#ffe6e6', el.style.color='#7a1f1f';
+  else el.style.background='rgba(255,255,255,0.95)', el.style.color='#123';
+  if(timeout>0){
+    clearTimeout(el._t);
+    el._t = setTimeout(()=>{ try{el.remove()}catch(e){} }, timeout);
+  }
+}
+
 async function loadData(){
   try{
     let rawProducts = await loadJSON(DATA_PATH + '/Tabel_produk_rows.json');
@@ -89,49 +105,64 @@ async function loadData(){
     mitra = normalizeData(rawMitra);
 
     console.info('Data loaded:', {products: products.length, categories: categories.length, mitra: mitra.length});
+
+    if(products.length===0){
+      showMessage('Tidak ada produk terdeteksi. Jika Anda membuka file langsung (file://), jalankan server lokal: python -m http.server', 'info', 10000);
+    }
   }catch(e){
     console.error('Gagal load data', e);
     products = []; categories = []; mitra = [];
+    showMessage('Gagal memuat data. Pastikan menjalankan server lokal atau periksa path data. Cek Console untuk detail.', 'error', 15000);
   }
   renderCategories();
   renderProducts();
   renderMitraList();
 }
 
-function renderCategories(){
-  categoriesEl.innerHTML = '';
-  // add "All" category
-  const all = document.createElement('div');
-  all.className = 'category active';
-  all.textContent = 'Semua';
-  all.dataset.cat = '';
-  all.addEventListener('click', ()=>{
-    document.querySelectorAll('.category').forEach(c=>c.classList.remove('active'));
-    all.classList.add('active');
-    renderProducts();
-  });
-  categoriesEl.appendChild(all);
-
-  categories.forEach(cat=>{
-    const d = document.createElement('div');
-    d.className = 'category';
-    d.textContent = cat.name || cat.nama || cat.product_category || 'Kategori';
-    d.dataset.cat = cat.id || cat.ID || cat.id_produk_category || d.textContent;
-    d.addEventListener('click', ()=>{
-      document.querySelectorAll('.category').forEach(c=>c.classList.remove('active'));
-      d.classList.add('active');
-      renderProducts();
+// renderProducts - show message when empty
+function renderProducts(){
+  const q = searchInput.value.trim().toLowerCase();
+  const activeCat = getActiveCategory();
+  if(!productListEl) return;
+  productListEl.innerHTML = '';
+  let list = Array.isArray(products) ? products.slice() : [];
+  if(activeCat){
+    list = list.filter(p=>{
+      return (p.category_id && p.category_id.toString()===activeCat.toString()) || (p.category && p.category.toString()===activeCat.toString()) || (p.product_category && p.product_category.toString()===activeCat.toString())
     });
-    categoriesEl.appendChild(d);
+  }
+  if(q){
+    list = list.filter(p=> (String(p.nama||p.name||p.product_name||'').toLowerCase().includes(q) || String(p.deskripsi||p.description||'').toLowerCase().includes(q)));
+  }
+
+  if(list.length===0){
+    productListEl.innerHTML = '<div style="padding:18px;text-align:center;color:#666">Tidak ada produk.</div>';
+    return;
+  }
+
+  list.forEach((p, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.setAttribute('data-index', idx);
+    const imgSrc = resolveImage(p);
+    const imgEl = createImageElement(imgSrc, p.nama||p.name||'Produk');
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.textContent = p.nama||p.name||p.product_name||'Produk';
+    const price = document.createElement('div');
+    price.className = 'price';
+    price.textContent = formatRupiah(p.harga||p.price||p.price_sell||0);
+
+    card.appendChild(imgEl);
+    card.appendChild(title);
+    card.appendChild(price);
+    card.addEventListener('click', ()=>openDetail(p));
+    productListEl.appendChild(card);
   });
-}
 
-function getActiveCategory(){
-  const el = document.querySelector('.category.active');
-  return el?el.dataset.cat:'';
+  // observe newly added cards for reveal animation
+  observeCards();
 }
-
-const SUPABASE_BASE = ''; // contoh: 'https://your-project.supabase.co/storage/v1/object/public'
 
 function resolveImage(p){
   // try many common fields and shapes used by APIs / Supabase
@@ -235,6 +266,7 @@ mainEl.addEventListener('scroll', ()=>{
 function renderProducts(){
   const q = searchInput.value.trim().toLowerCase();
   const activeCat = getActiveCategory();
+  if(!productListEl) return;
   productListEl.innerHTML = '';
   let list = Array.isArray(products) ? products.slice() : [];
   if(activeCat){
@@ -244,6 +276,11 @@ function renderProducts(){
   }
   if(q){
     list = list.filter(p=> (String(p.nama||p.name||p.product_name||'').toLowerCase().includes(q) || String(p.deskripsi||p.description||'').toLowerCase().includes(q)));
+  }
+
+  if(list.length===0){
+    productListEl.innerHTML = '<div style="padding:18px;text-align:center;color:#666">Tidak ada produk.</div>';
+    return;
   }
 
   list.forEach((p, idx)=>{
