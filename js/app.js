@@ -151,6 +151,14 @@ function renderCategoryProducts(){
     });
   }
 
+  // Limit products based on category
+  const selectedCat = categories.find(c=>String(c.id||c.category_id||c.id_category||c.name||c.nama||c.kategori||c.title)===String(activeCat));
+  const catName = (selectedCat?.nama||selectedCat?.name||selectedCat?.kategori||selectedCat?.title||'').toLowerCase();
+  let limit = 0;
+  if(catName.includes('makanan') || catName.includes('food')) limit = 9;
+  else if(catName.includes('minuman') || catName.includes('drink') || catName.includes('beverage')) limit = 15;
+  if(limit > 0 && list.length > limit) list = list.slice(0, limit);
+
   if(list.length===0){
     categoryProductListEl.innerHTML = '<div style="padding:18px;text-align:center;color:#666">Tidak ada produk untuk kategori ini.</div>';
     return;
@@ -160,6 +168,7 @@ function renderCategoryProducts(){
     const card = document.createElement('div');
     card.className = 'card';
     card.setAttribute('data-index', idx);
+    card.style.animationDelay = `${idx * 0.1}s`; // Staggered animation
     const imgSrc = resolveImage(p);
     const imgEl = createImageElement(imgSrc, p.nama||p.name||p.product_name||'Produk');
     const title = document.createElement('div');
