@@ -103,35 +103,107 @@ function getActiveCategory(){
   return el?el.dataset.cat:'';
 }
 
+const SUPABASE_BASE = ''; // contoh: 'https://your-project.supabase.co/storage/v1/object/public'
+
 function resolveImage(p){
-  // prefer explicit image fields, then try img/ folder, otherwise placeholder
-  const possible = [p.image, p.gambar, p.photo, p.foto, p.img, p.thumbnail];
-  for(const val of possible){
-    if(val && typeof val==='string' && val.trim()!==''){
-      // if value looks like a URL or path
-      return val.startsWith('http') ? val : (val.startsWith('/') ? val : './img/' + val);
+  // try many common fields and shapes used by APIs / Supabase
+  const possibleKeys = ['image','gambar','photo','foto','img','thumbnail','picture','image_url','url','public_url','file','gambar_url'];
+
+  function normalizeVal(val){
+    if(!val) return null;
+    if(typeof val === 'string') return val.trim();
+    if(typeof val === 'object'){
+      // try common object shapes
+      return val.url || val.path || val.publicURL || val.public_url || val.storage_path || val.file || null;
+    }
+    return null;
+  }
+
+  // check direct keys
+  for(const k of possibleKeys){
+    if(p[k]){
+      const v = normalizeVal(p[k]);
+      if(v) return makeFullUrl(v);
     }
   }
-  // fallback to product-specific field like 'picture' or none
-  return p.image_url || p.url || './img/taplak.jpg' || 'https://via.placeholder.com/400x300?text=Produk';
+
+  // check arrays (e.g., images: [{url: ...}])
+  if(Array.isArray(p.images) && p.images.length){
+    const v = normalizeVal(p.images[0]);
+    if(v) return makeFullUrl(v);
+  }
+
+  if(Array.isArray(p.gambar) && p.gambar.length){
+    const v = normalizeVal(p.gambar[0]);
+    if(v) return makeFullUrl(v);
+  }
+
+  // fallback to placeholder local image
+  return './img/taplak.jpg';
+
+  function makeFullUrl(v){
+    if(!v) return './img/taplak.jpg';
+    // already absolute
+    if(v.startsWith('http') || v.startsWith('data:')) return v;
+    // absolute path on server, keep as-is (prepend dot to use relative)
+    if(v.startsWith('/')) return '.' + v;
+    // if looks like supabase storage path (e.g., 'public/produk/image.jpg' or 'bucket/..') and SUPABASE_BASE configured
+    if((v.includes('public/') || v.includes('storage') || v.includes('bucket') || v.match(/\.jpg$|\.png$|\.webp$|\.jpeg$/i)) && SUPABASE_BASE){
+      return SUPABASE_BASE.replace(/\/$/, '') + '/' + v.replace(/^\/?/, '');
+    }
+    // try local img folder
+    return './img/' + v;
+  }
 }
 
 function createImageElement(src, alt){
   const img = document.createElement('img');
   img.className = 'loading';
-  img.src = src;
+  // set a tiny transparent placeholder first to reserve layout (optional)
+  img.src = src || './img/taplak.jpg';
   img.alt = alt||'';
+  img.loading = 'lazy';
   img.addEventListener('load', ()=>{
     img.classList.remove('loading');
   });
   img.addEventListener('error', ()=>{
-    // fallback to local placeholder
-    img.src = './img/taplak.jpg';
-    img.classList.remove('loading');
+    if(!img._retried){
+      img._retried = true;
+      img.src = './img/taplak.jpg';
+    } else {
+      img.classList.remove('loading');
+    }
   });
   return img;
 }
 
+// reveal cards when in viewport
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.classList.add('in-view');
+    }
+  });
+},{threshold:0.15});
+
+// apply observer after rendering products
+const observeCards = ()=>{
+  document.querySelectorAll('.card').forEach((c,idx)=>{
+    c.style.setProperty('--i', idx);
+    io.observe(c);
+  });
+};
+
+// banner parallax on scroll
+const mainEl = document.querySelector('main');
+mainEl.addEventListener('scroll', ()=>{
+  const banner = document.querySelector('.banner');
+  if(!banner) return;
+  const scrolled = Math.min(1, window.scrollY / 120);
+  if(scrolled>0.02) banner.classList.add('scrolled'); else banner.classList.remove('scrolled');
+});
+
+// modify renderProducts to call observeCards
 function renderProducts(){
   const q = searchInput.value.trim().toLowerCase();
   const activeCat = getActiveCategory();
@@ -146,9 +218,10 @@ function renderProducts(){
     list = list.filter(p=> (String(p.nama||p.name||p.product_name||'').toLowerCase().includes(q) || String(p.deskripsi||p.description||'').toLowerCase().includes(q)));
   }
 
-  list.forEach(p=>{
+  list.forEach((p, idx)=>{
     const card = document.createElement('div');
     card.className = 'card';
+    card.setAttribute('data-index', idx);
     const imgSrc = resolveImage(p);
     const imgEl = createImageElement(imgSrc, p.nama||p.name||'Produk');
     const title = document.createElement('div');
@@ -164,6 +237,9 @@ function renderProducts(){
     card.addEventListener('click', ()=>openDetail(p));
     productListEl.appendChild(card);
   });
+
+  // observe newly added cards for reveal animation
+  observeCards();
 }
 
 function openDetail(p){
