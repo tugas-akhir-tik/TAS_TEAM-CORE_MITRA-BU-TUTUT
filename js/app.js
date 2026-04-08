@@ -74,13 +74,34 @@ function loadJSON(path){
   return fetch(path).then(r=>r.json());
 }
 
+function normalizeData(x){
+  if(!x) return [];
+  if(Array.isArray(x)) return x;
+  if(x.data && Array.isArray(x.data)) return x.data;
+  if(x.rows && Array.isArray(x.rows)) return x.rows;
+  if(x.items && Array.isArray(x.items)) return x.items;
+  if(x.result && Array.isArray(x.result)) return x.result;
+  // sometimes Supabase returns { body: [...]} or similar
+  for(const k of Object.keys(x)){
+    if(Array.isArray(x[k])) return x[k];
+  }
+  return [];
+}
+
 async function loadData(){
   try{
-    products = await loadJSON(DATA_PATH + '/Tabel_produk_rows.json');
-    categories = await loadJSON(DATA_PATH + '/Produk_Category_rows.json');
-    mitra = await loadJSON(DATA_PATH + '/Tabel_mitra_rows.json');
+    let rawProducts = await loadJSON(DATA_PATH + '/Tabel_produk_rows.json');
+    let rawCategories = await loadJSON(DATA_PATH + '/Produk_Category_rows.json');
+    let rawMitra = await loadJSON(DATA_PATH + '/Tabel_mitra_rows.json');
+
+    products = normalizeData(rawProducts);
+    categories = normalizeData(rawCategories);
+    mitra = normalizeData(rawMitra);
+
+    console.info('Data loaded:', {products: products.length, categories: categories.length, mitra: mitra.length});
   }catch(e){
     console.error('Gagal load data', e);
+    products = []; categories = []; mitra = [];
   }
   renderCategories();
   renderProducts();
