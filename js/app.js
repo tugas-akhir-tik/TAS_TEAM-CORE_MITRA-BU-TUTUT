@@ -28,6 +28,16 @@ const mitraDetailContent = document.getElementById('mitraDetailContent');
 const openMitraBtn = document.getElementById('openMitra');
 const backToMitra = document.getElementById('backToMitra');
 
+// Review modal logic
+const reviewModal = document.getElementById('reviewModal');
+const closeReviewModal = document.getElementById('closeReviewModal');
+const cancelReview = document.getElementById('cancelReview');
+const submitReview = document.getElementById('submitReview');
+const starInput = document.getElementById('starInput');
+const reviewText = document.getElementById('reviewText');
+let currentReviewProductId = null;
+let currentRating = 5;
+
 function setActiveView(id){
   views.forEach(v=>v.classList.toggle('active', v.id===id));
   navBtns.forEach(b=>b.classList.toggle('active', b.dataset.view===id));
@@ -268,75 +278,73 @@ function openDetail(p){
   actions.appendChild(addBtn); actions.appendChild(closeBtn);
   wrapper.appendChild(img); wrapper.appendChild(h3); wrapper.appendChild(pr); wrapper.appendChild(desc); wrapper.appendChild(actions);
   detailContent.appendChild(wrapper);
-}
 
-function addToCart(p){
-  const existing = cart.find(c=>c.id===p.id || c.id_produk===p.id_produk || c.nama===p.nama);
-  if(existing){
-    existing.qty = (existing.qty||1) + 1;
-  }else{
-    cart.push({
-      id: p.id || p.id_produk || (new Date()).getTime(),
-      nama: p.nama||p.name||p.product_name||'Produk',
-      price: Number(p.harga||p.price||0) || 0,
-      qty: 1,
-      image: resolveImage(p)
-    });
-  }
-  saveCart();
-  renderCart();
-  alert('Ditambahkan ke keranjang');
-}
-
-function renderCart(){
-  cartListEl.innerHTML = '';
-  let total = 0;
-  if(cart.length===0){
-    cartListEl.innerHTML = '<div>Keranjang kosong</div>';
-  }
-  cart.forEach(item=>{
-    const div = document.createElement('div');
-    div.className = 'cart-item';
-    div.innerHTML = `
-      <img src="${item.image}" />
-      <div style="flex:1">
-        <div>${item.nama}</div>
-        <div>${formatRupiah(item.price)} x ${item.qty}</div>
-      </div>
-      <div>
-        <button class="btn" data-id="${item.id}" data-action="minus">-</button>
-        <button class="btn" data-id="${item.id}" data-action="plus">+</button>
-      </div>
-    `;
-    cartListEl.appendChild(div);
-    total += item.price * item.qty;
+  // add review button
+  const reviewBtn = document.createElement('button'); reviewBtn.className='btn'; reviewBtn.textContent='Tulis Ulasan';
+  reviewBtn.addEventListener('click', ()=>{
+    const pid = p.id || p.id_produk || (p.nama||p.name||p.product_name);
+    openReviewModal(pid);
   });
-  cartTotalEl.textContent = formatRupiah(total);
-  cartCountEl.textContent = cart.reduce((s,i)=>s+i.qty,0);
+  addBtn.insertAdjacentElement('afterend', reviewBtn);
 
-  cartListEl.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const id = b.dataset.id;
-      const action = b.dataset.action;
-      const it = cart.find(x=>x.id.toString()===id.toString());
-      if(!it) return;
-      if(action==='plus') it.qty++;
-      if(action==='minus') it.qty = Math.max(0, it.qty-1);
-      cart = cart.filter(x=>x.qty>0);
-      saveCart();
-      renderCart();
-    });
+  // append reviews
+  const container = document.createElement('div'); container.style.marginTop='12px';
+  const title = document.createElement('div'); title.className='section-title'; title.textContent='Ulasan';
+  detailContent.appendChild(title);
+  renderReviewsForProduct(p.id || p.id_produk || (p.nama||p.name||p.product_name), detailContent);
+}
+
+// review modal functions
+function openReviewModal(productId){
+  currentReviewProductId = productId;
+  reviewModal.setAttribute('aria-hidden', 'false');
+  reviewText.value = '';
+  renderStars(currentRating);
+}
+function closeReview(){
+  reviewModal.setAttribute('aria-hidden', 'true');
+}
+function renderStars(r){
+  starInput.innerHTML = '';
+  for(let i=1;i<=5;i++){
+    const s = document.createElement('span'); s.className='star'+(i<=r?' active':''); s.textContent='★'; s.dataset.val = i;
+    s.addEventListener('click', ()=>{ currentRating = i; renderStars(currentRating); });
+    starInput.appendChild(s);
+  }
+}
+
+closeReviewModal.addEventListener('click', closeReview);
+cancelReview.addEventListener('click', closeReview);
+submitReview.addEventListener('click', ()=>{
+  if(!currentReviewProductId) return;
+  const text = reviewText.value.trim();
+  const reviews = JSON.parse(localStorage.getItem('mt_reviews')||'{}');
+  reviews[currentReviewProductId] = reviews[currentReviewProductId] || [];
+  reviews[currentReviewProductId].push({rating: currentRating, text, date: new Date().toISOString()});
+  localStorage.setItem('mt_reviews', JSON.stringify(reviews));
+  alert('Terima kasih atas ulasannya');
+  closeReview();
+  // if detail open for this product, re-render reviews
+  if(document.querySelector('.detail-content h3') && document.querySelector('.detail-content h3').textContent){
+    // naive check: re-open detail to refresh reviews
+    // better: inject reviews directly
+  }
+});
+
+function renderReviewsForProduct(productId, container){
+  const reviews = JSON.parse(localStorage.getItem('mt_reviews')||'{}');
+  const list = reviews[productId] || [];
+  const wrap = document.createElement('div'); wrap.className='reviews';
+  if(list.length===0){ wrap.innerHTML = '<div>Belum ada ulasan.</div>'; container.appendChild(wrap); return }
+  list.forEach(r=>{
+    const d = document.createElement('div'); d.style.background='#fff'; d.style.padding='8px'; d.style.borderRadius='8px'; d.style.marginBottom='8px';
+    d.innerHTML = `<div style="font-weight:700">${'★'.repeat(r.rating)}<span style="color:#666;font-weight:400;margin-left:6px;font-size:12px">${new Date(r.date).toLocaleString()}</span></div><div style="margin-top:6px">${r.text}</div>`;
+    wrap.appendChild(d);
   });
+  container.appendChild(wrap);
 }
 
-function saveCart(){
-  localStorage.setItem('mt_cart', JSON.stringify(cart));
-}
-function loadCart(){
-  try{cart = JSON.parse(localStorage.getItem('mt_cart'))||[]}catch(e){cart=[]}
-  renderCart();
-}
-
+// checkout and orders logic
 checkoutBtn.addEventListener('click', ()=>{
   if(cart.length===0){alert('Keranjang kosong');return}
   // simple checkout mock

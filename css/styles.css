@@ -62,3 +62,13 @@ body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:40px;backgr
 .mitra-card img{width:64px;height:64px;object-fit:cover;border-radius:10px}
 .mitra-info .title{font-weight:800}
 .mitra-info .subtitle{color:var(--muted);font-size:13px}
+
+/* modal review */
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:99}
+.modal[aria-hidden="false"]{display:flex}
+.modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.35)}
+.modal-panel{position:relative;background:var(--card);padding:14px;border-radius:12px;max-width:420px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:2}
+.star-input{display:flex;gap:6px;margin:8px 0}
+.star{font-size:22px;cursor:pointer;color:#ddd}
+.star.active{color:gold}
+textarea#reviewText{width:100%;border-radius:8px;padding:8px;border:1px solid #e6e6e6}
