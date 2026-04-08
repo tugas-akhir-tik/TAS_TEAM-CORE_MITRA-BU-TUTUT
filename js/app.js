@@ -12,6 +12,9 @@ const views = document.querySelectorAll('.view');
 const navBtns = document.querySelectorAll('.nav-btn');
 const productListEl = document.getElementById('productList');
 const categoriesEl = document.getElementById('categories');
+const categoryPageCategoriesEl = document.getElementById('categoriesPage');
+const categoryProductListEl = document.getElementById('categoryProductList');
+const categoryProductsTitle = document.getElementById('categoryProductsTitle');
 const searchInput = document.getElementById('searchInput');
 const detailView = document.getElementById('detailView');
 const detailContent = document.getElementById('detailContent');
@@ -40,10 +43,10 @@ navBtns.forEach(btn=>{
 });
 
 openCategoriesBtn.addEventListener('click', ()=>{
-  // scroll to categories section in home
-  setActiveView('homeView');
+  setActiveView('categoryView');
+  renderCategoryProducts();
   setTimeout(()=>{
-    categoriesEl.scrollIntoView({behavior:'smooth',inline:'center'});
+    categoryPageCategoriesEl.scrollIntoView({behavior:'smooth',inline:'center'});
   },100);
 });
 
@@ -53,6 +56,7 @@ backToHome.addEventListener('click', ()=>{
 
 searchInput.addEventListener('input', ()=>{
   renderProducts();
+  renderCategoryProducts();
 });
 
 function formatRupiah(n){
@@ -76,6 +80,96 @@ function normalizeData(x){
     if(Array.isArray(x[k])) return x[k];
   }
   return [];
+}
+
+function getActiveCategory(){
+  const active = document.querySelector('.category.active');
+  return active ? active.dataset.cat : null;
+}
+
+function setActiveCategory(catId){
+  document.querySelectorAll('.category').forEach(el=>{
+    el.classList.toggle('active', el.dataset.cat === String(catId));
+  });
+  const selected = categories.find(c=>String(c.id||c.category_id||c.id_category||c.name||c.nama||c.kategori||c.title)===String(catId));
+  categoryProductsTitle.textContent = selected ? `Menu ${selected.nama||selected.name||selected.kategori||selected.title}` : 'Menu Kategori';
+  renderProducts();
+  renderCategoryProducts();
+}
+
+function renderCategories(){
+  if(!categoriesEl || !categoryPageCategoriesEl) return;
+  categoriesEl.innerHTML = '';
+  categoryPageCategoriesEl.innerHTML = '';
+  const list = Array.isArray(categories) ? categories : [];
+  if(list.length===0){
+    categoriesEl.innerHTML = '<div style="padding:12px;color:#666">Kategori belum tersedia.</div>';
+    categoryPageCategoriesEl.innerHTML = '<div style="padding:12px;color:#666">Kategori belum tersedia.</div>';
+    return;
+  }
+
+  list.forEach((cat, idx)=>{
+    const label = cat.nama||cat.name||cat.kategori||cat.title||cat.category||`Kategori ${idx+1}`;
+    const id = String(cat.id||cat.category_id||cat.id_category||label);
+
+    const homeCard = document.createElement('div');
+    homeCard.className = 'category';
+    homeCard.dataset.cat = id;
+    homeCard.textContent = label;
+    homeCard.addEventListener('click', ()=>{
+      setActiveView('categoryView');
+      setActiveCategory(id);
+    });
+
+    const pageCard = document.createElement('div');
+    pageCard.className = 'category';
+    pageCard.dataset.cat = id;
+    pageCard.textContent = label;
+    pageCard.addEventListener('click', ()=>{
+      setActiveCategory(id);
+    });
+
+    categoriesEl.appendChild(homeCard);
+    categoryPageCategoriesEl.appendChild(pageCard);
+  });
+}
+
+function renderCategoryProducts(){
+  if(!categoryProductListEl) return;
+  const activeCat = getActiveCategory();
+  categoryProductListEl.innerHTML = '';
+  let list = Array.isArray(products) ? products.slice() : [];
+  if(activeCat){
+    list = list.filter(p=>{
+      return (p.category_id && p.category_id.toString()===activeCat.toString()) || (p.category && p.category.toString()===activeCat.toString()) || (p.product_category && p.product_category.toString()===activeCat.toString()) || (p.kategori && p.kategori.toString()===activeCat.toString());
+    });
+  }
+
+  if(list.length===0){
+    categoryProductListEl.innerHTML = '<div style="padding:18px;text-align:center;color:#666">Tidak ada produk untuk kategori ini.</div>';
+    return;
+  }
+
+  list.forEach((p, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.setAttribute('data-index', idx);
+    const imgSrc = resolveImage(p);
+    const imgEl = createImageElement(imgSrc, p.nama||p.name||p.product_name||'Produk');
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.textContent = p.nama||p.name||p.product_name||'Produk';
+    const price = document.createElement('div');
+    price.className = 'price';
+    price.textContent = formatRupiah(p.harga||p.price||p.price_sell||0);
+
+    card.appendChild(imgEl);
+    card.appendChild(title);
+    card.appendChild(price);
+    card.addEventListener('click', ()=>openDetail(p));
+    categoryProductListEl.appendChild(card);
+  });
+  observeCards();
 }
 
 function showMessage(text, type='info', timeout=8000){
@@ -116,6 +210,7 @@ async function loadData(){
   }
   renderCategories();
   renderProducts();
+  renderCategoryProducts();
   renderMitraList();
 }
 

@@ -39,6 +39,14 @@
         <div id="productList" class="product-list"></div>
       </section>
 
+      <!-- Category View -->
+      <section id="categoryView" class="view">
+        <div class="section-title">Kategori</div>
+        <div id="categoriesPage" class="categories"></div>
+        <div class="section-title" id="categoryProductsTitle">Menu Kategori</div>
+        <div id="categoryProductList" class="product-list"></div>
+      </section>
+
       <!-- Detail View -->
       <section id="detailView" class="view">
         <button id="backToHome" class="btn-back">‹ Kembali</button>
@@ -87,7 +95,7 @@
     <!-- Bottom Navigation -->
     <nav class="bottom-nav">
       <button class="nav-btn active" data-view="homeView">Home</button>
-      <button class="nav-btn" data-view="homeView" id="openCategories">Kategori</button>
+      <button class="nav-btn" data-view="categoryView" id="openCategories">Kategori</button>
       <button class="nav-btn" data-view="cartView">Keranjang <span id="cartCount" class="badge">0</span></button>
       <button class="nav-btn" data-view="profileView">Profil</button>
     </nav>
