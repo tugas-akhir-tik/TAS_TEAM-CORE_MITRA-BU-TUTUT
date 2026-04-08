@@ -361,3 +361,57 @@ renderOrders();
 
 // expose for debug
 window.app = {products,categories,mitra,cart,addToCart,renderProducts};
+
+// Swipe gesture navigation (touch) untuk pengalaman mobile lebih smooth
+(function(){
+  const mainArea = document.querySelector('main');
+  if(!mainArea) return;
+  let startX = 0, startY = 0;
+  const THRESHOLD = 50; // px
+
+  function getViewOrder(){
+    const btns = Array.from(document.querySelectorAll('.bottom-nav .nav-btn'));
+    const views = [];
+    btns.forEach(b=>{
+      const v = b.dataset.view;
+      if(v && !views.includes(v)) views.push(v);
+    });
+    return views.length ? views : ['homeView','cartView','profileView'];
+  }
+
+  function focusViewIndex(i){
+    const order = getViewOrder();
+    const idx = (i + order.length) % order.length;
+    setActiveView(order[idx]);
+  }
+
+  function goNextView(){
+    const order = getViewOrder();
+    const current = order.indexOf(document.querySelector('.view.active')?.id);
+    focusViewIndex(current + 1);
+  }
+  function goPrevView(){
+    const order = getViewOrder();
+    const current = order.indexOf(document.querySelector('.view.active')?.id);
+    focusViewIndex(current - 1);
+  }
+
+  mainArea.addEventListener('touchstart', (e)=>{
+    const t = e.touches[0]; startX = t.clientX; startY = t.clientY;
+  }, {passive:true});
+
+  mainArea.addEventListener('touchend', (e)=>{
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > THRESHOLD){
+      if(dx < 0) goNextView(); else goPrevView();
+    }
+  }, {passive:true});
+
+  // also support keyboard arrows for convenience during desktop testing
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowLeft') goPrevView();
+    if(e.key === 'ArrowRight') goNextView();
+  });
+})();
