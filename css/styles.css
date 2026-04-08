@@ -85,8 +85,23 @@ body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:40px;backgr
   .search input{width:320px}
 }
 .mitra-list{display:grid;gap:10px;animation:staggerFadeIn 0.8s ease-out}
-.mitra-card{display:flex;gap:10px;align-items:center;background:var(--card);padding:10px;border-radius:12px;box-shadow:var(--shadow);cursor:pointer;transition:all 0.3s ease;will-change:transform}
-.mitra-card:hover{transform:translateY(-4px) scale(1.02);box-shadow:var(--shadow-hover)}
-.mitra-card img{width:64px;height:64px;object-fit:cover;border-radius:10px}
-.mitra-info .title{font-weight:800}
-.mitra-info .subtitle{color:var(--muted);font-size:13px}
+.mitra-card{display:flex;gap:10px;align-items:center;background:linear-gradient(180deg,#f7fff7,#ffffff);padding:12px;border-radius:16px;box-shadow:var(--shadow);cursor:pointer;transition:transform 0.35s ease,box-shadow 0.35s ease,background 0.35s ease;will-change:transform,box-shadow}
+.mitra-card:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 20px 50px rgba(46,139,87,0.16);background:linear-gradient(180deg,#ecfff0,#ffffff)}
+.mitra-card img{width:64px;height:64px;object-fit:cover;border-radius:16px;box-shadow:0 6px 18px rgba(46,139,87,0.08)}
+.mitra-info .title{font-weight:900;font-size:15px;color:#214b35}
+.mitra-info .subtitle{color:var(--muted);font-size:13px;line-height:1.4}
+.mitra-detail-meta{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.mitra-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(46,139,87,0.12);color:var(--primary);font-weight:700;font-size:13px;box-shadow:inset 0 0 0 1px rgba(46,139,87,0.12)}
+.mitra-menu-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+.mitra-product-card{background:linear-gradient(180deg,#ffffff,#f8fff8);border:1px solid rgba(46,139,87,0.12);border-radius:16px;overflow:hidden;box-shadow:0 14px 40px rgba(46,139,87,0.06);transition:transform 0.3s ease,box-shadow 0.3s ease;animation:fadeInUp 0.6s ease-out;will-change:transform}
+.mitra-product-card:hover{transform:translateY(-6px);box-shadow:0 22px 52px rgba(46,139,87,0.18)}
+.mitra-product-card img{width:100%;height:160px;object-fit:cover;transition:transform 0.35s ease;display:block}
+.mitra-product-card:hover img{transform:scale(1.03)}
+.mitra-product-card .card-body{padding:12px 14px}
+.mitra-product-card .title{font-size:15px;margin:0 0 6px;color:#1f4d2f}
+.mitra-product-card .subtitle{font-size:13px;color:#5b7b65;line-height:1.4;margin-bottom:10px}
+.mitra-product-card .price{font-weight:800;color:var(--primary);margin-bottom:10px}
+.mitra-product-card .card-actions{display:flex;gap:10px;flex-wrap:wrap}
+.mitra-product-card .btn{flex:1 1 auto;min-width:110px}
+.mitra-empty{padding:18px;text-align:center;color:#4a6d57;background:rgba(255,255,255,0.9);border-radius:14px;box-shadow:var(--shadow);}
+@media(min-width:600px){.mitra-menu-grid{grid-template-columns:repeat(2,1fr)}}

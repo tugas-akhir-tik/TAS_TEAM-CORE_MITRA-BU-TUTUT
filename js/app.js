@@ -377,26 +377,42 @@ function renderMitraList(){
 function openMitraDetail(m){
   setActiveView('mitraDetailView');
   mitraDetailContent.innerHTML = '';
-  const wrapper = document.createElement('div'); wrapper.className='detail-content';
-  const img = createImageElement(resolveImage(m), m.nama||m.name||'Mitra'); img.style.width='100%'; img.style.height='160px'; img.style.objectFit='cover'; img.style.borderRadius='8px';
+  const wrapper = document.createElement('div'); wrapper.className='detail-content mitra-detail-card';
+  const img = createImageElement(resolveImage(m), m.nama||m.name||'Mitra'); img.style.width='100%'; img.style.height='180px'; img.style.objectFit='cover'; img.style.borderRadius='16px';
   const h3 = document.createElement('h3'); h3.textContent = m.nama || m.name || 'Mitra';
-  const addr = document.createElement('div'); addr.textContent = m.alamat || m.address || '';
-  const desc = document.createElement('p'); desc.textContent = m.keterangan || m.description || '';
-  wrapper.appendChild(img); wrapper.appendChild(h3); wrapper.appendChild(addr); wrapper.appendChild(desc);
+  const meta = document.createElement('div'); meta.className='mitra-detail-meta';
+  const badge = document.createElement('span'); badge.className='mitra-badge'; badge.textContent = m.rating ? `${m.rating.toFixed(1)} ★` : 'Mitra Unggulan';
+  const location = document.createElement('span'); location.className='subtitle'; location.textContent = m.alamat || m.address || 'Lokasi mitra tidak tersedia';
+  meta.appendChild(badge); meta.appendChild(location);
+  const desc = document.createElement('p'); desc.textContent = m.keterangan || m.description || 'Mitra ini menghadirkan menu segar dengan rasa khas Bu Tutut.';
+  wrapper.appendChild(img); wrapper.appendChild(h3); wrapper.appendChild(meta); wrapper.appendChild(desc);
 
   // show products from this mitra
   const related = products.filter(p=> (p.mitra_id && (p.mitra_id==m.id || p.mitra_id==m.id_mitra)) || (p.id_mitra && (p.id_mitra==m.id || p.id_mitra==m.id_mitra)) || (p.mitra && (p.mitra==m.nama || p.mitra==m.name)) );
-  const title = document.createElement('div'); title.className='section-title'; title.textContent='Produk dari Mitra';
-  const grid = document.createElement('div'); grid.className='product-list';
-  related.forEach(p=>{
-    const card = document.createElement('div'); card.className='card';
-    const imgEl = createImageElement(resolveImage(p));
-    const titleP = document.createElement('div'); titleP.className='title'; titleP.textContent = p.nama||p.name||'Produk';
-    const price = document.createElement('div'); price.className='price'; price.textContent = formatRupiah(p.harga||p.price||0);
-    card.appendChild(imgEl); card.appendChild(titleP); card.appendChild(price);
-    card.addEventListener('click', ()=>openDetail(p));
-    grid.appendChild(card);
-  });
+  const title = document.createElement('div'); title.className='section-title'; title.textContent='Menu Pilihan dari Mitra';
+  const grid = document.createElement('div'); grid.className='mitra-menu-grid';
+
+  if(related.length === 0){
+    const empty = document.createElement('div'); empty.className='mitra-empty';
+    empty.textContent = 'Belum ada menu terdaftar untuk mitra ini. Coba mitra lain untuk melihat pilihan menu lengkap.';
+    grid.appendChild(empty);
+  } else {
+    related.forEach((p, idx)=>{
+      const card = document.createElement('div'); card.className='mitra-product-card';
+      const imgEl = createImageElement(resolveImage(p), p.nama||p.name||'Produk');
+      const body = document.createElement('div'); body.className='card-body';
+      const titleP = document.createElement('div'); titleP.className='title'; titleP.textContent = p.nama||p.name||p.product_name||'Produk';
+      const subtitle = document.createElement('div'); subtitle.className='subtitle'; subtitle.textContent = p.kategori || p.category || p.product_category || (p.deskripsi ? String(p.deskripsi).slice(0, 40) + '...' : 'Menu favorit dari mitra ini');
+      const price = document.createElement('div'); price.className='price'; price.textContent = formatRupiah(p.harga||p.price||p.price_sell||0);
+      const actions = document.createElement('div'); actions.className='card-actions';
+      const orderBtn = document.createElement('button'); orderBtn.className='btn primary'; orderBtn.textContent='Lihat';
+      orderBtn.addEventListener('click', ()=>openDetail(p));
+      actions.appendChild(orderBtn);
+      body.appendChild(titleP); body.appendChild(subtitle); body.appendChild(price); body.appendChild(actions);
+      card.appendChild(imgEl); card.appendChild(body);
+      grid.appendChild(card);
+    });
+  }
 
   mitraDetailContent.appendChild(wrapper);
   mitraDetailContent.appendChild(title);
