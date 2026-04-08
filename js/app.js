@@ -44,7 +44,13 @@ navBtns.forEach(btn=>{
 
 openCategoriesBtn.addEventListener('click', ()=>{
   setActiveView('categoryView');
-  renderCategoryProducts();
+  const firstCategory = categories[0];
+  const activeCat = getActiveCategory();
+  if(!activeCat && firstCategory){
+    setActiveCategory(String(firstCategory.id||firstCategory.category_id||firstCategory.id_category||firstCategory.name||firstCategory.nama||firstCategory.kategori||firstCategory.title));
+  } else {
+    renderCategoryProducts();
+  }
   setTimeout(()=>{
     categoryPageCategoriesEl.scrollIntoView({behavior:'smooth',inline:'center'});
   },100);
@@ -348,6 +354,67 @@ const observeCards = ()=>{
   });
 };
 
+function saveCart(){
+  localStorage.setItem('mt_cart', JSON.stringify(cart));
+}
+
+function loadCart(){
+  cart = JSON.parse(localStorage.getItem('mt_cart')||'[]');
+  renderCart();
+}
+
+function renderCart(){
+  if(!cartListEl) return;
+  cartListEl.innerHTML = '';
+  if(cart.length===0){
+    cartListEl.innerHTML = '<div style="padding:18px;text-align:center;color:#666">Keranjang kosong.</div>';
+    cartTotalEl.textContent = formatRupiah(0);
+    cartCountEl.textContent = '0';
+    return;
+  }
+
+  let total = 0;
+  cart.forEach((item, idx)=>{
+    const row = document.createElement('div'); row.className='cart-item';
+    const img = createImageElement(resolveImage(item), item.nama||item.name||item.product_name||'Produk');
+    img.style.width='64px'; img.style.height='64px'; img.style.borderRadius='10px';
+    const info = document.createElement('div'); info.style.flex='1';
+    const title = document.createElement('div'); title.className='title'; title.textContent = item.nama||item.name||item.product_name||'Produk';
+    const qty = document.createElement('div'); qty.textContent = `x${item.qty||1}`;
+    const price = document.createElement('div'); price.className='price'; price.textContent = formatRupiah((item.harga||item.price||item.price_sell||0) * (item.qty||1));
+    info.appendChild(title); info.appendChild(qty); info.appendChild(price);
+    const removeBtn = document.createElement('button'); removeBtn.className='btn'; removeBtn.textContent='Hapus';
+    removeBtn.addEventListener('click', ()=>{
+      cart.splice(idx,1);
+      saveCart();
+      renderCart();
+      cartCountEl.textContent = cart.reduce((sum, x)=>sum+(x.qty||1),0);
+    });
+    row.appendChild(img); row.appendChild(info); row.appendChild(removeBtn);
+    cartListEl.appendChild(row);
+    total += (item.harga||item.price||item.price_sell||0) * (item.qty||1);
+  });
+  cartTotalEl.textContent = formatRupiah(total);
+  cartCountEl.textContent = cart.reduce((sum, x)=>sum+(x.qty||1),0);
+}
+
+function addToCart(product){
+  const found = cart.find(item=> item.id === product.id || item.id === product.id_produk || item.id === product.product_id || item.name === product.name || item.nama === product.nama);
+  if(found){
+    found.qty = (found.qty||1) + 1;
+  } else {
+    cart.push({
+      ...product,
+      qty: 1,
+      price: Number(product.harga||product.price||product.price_sell||0)
+    });
+  }
+  saveCart();
+  renderCart();
+  cartCountEl.textContent = cart.reduce((sum, x)=>sum+(x.qty||1),0);
+  showMessage('Produk ditambahkan ke keranjang.', 'info', 2000);
+}
+
 // banner parallax on scroll
 const mainEl = document.querySelector('main');
 mainEl.addEventListener('scroll', ()=>{
@@ -488,39 +555,30 @@ function openMitraDetail(m){
   const grid = document.createElement('div'); grid.className='mitra-menu-grid';
 
   if(related.length === 0){
-  const empty = document.createElement('div'); empty.className='mitra-empty';
-  empty.textContent = 'Belum ada menu terdaftar untuk mitra ini. Coba mitra lain untuk melihat pilihan menu lengkap.';
-  grid.appendChild(empty);
-} else {
-  related.forEach((p, idx)=>{
-    const card = document.createElement('div'); card.className='mitra-product-card';
-    const imgEl = createImageElement("img/nutrisari.png", "Nutrisari");
-    const body = document.createElement('div'); body.className='card-body';
-    const titleP = document.createElement('div'); 
-    titleP.className='title'; 
-    titleP.textContent = "Nutrisari";
-    const subtitle = document.createElement('div'); 
-    subtitle.className='subtitle'; 
-    subtitle.textContent = "Minuman";
-    const price = document.createElement('div'); 
-    price.className='price'; 
-    price.textContent = formatRupiah(4000);
-
-    const actions = document.createElement('div'); actions.className='card-actions';
-    const orderBtn = document.createElement('button'); orderBtn.className='btn primary'; orderBtn.textContent='Lihat';
-    orderBtn.addEventListener('click', ()=>openDetail(p));
-
-    actions.appendChild(orderBtn);
-    body.appendChild(titleP); 
-    body.appendChild(subtitle); 
-    body.appendChild(price); 
-    body.appendChild(actions);
-
-    card.appendChild(imgEl); 
-    card.appendChild(body);
-    grid.appendChild(card);
-  });
-}
+    const empty = document.createElement('div'); empty.className='mitra-empty';
+    empty.textContent = 'Belum ada menu terdaftar untuk mitra ini. Coba mitra lain untuk melihat pilihan menu lengkap.';
+    grid.appendChild(empty);
+  } else {
+    related.forEach((p, idx)=>{
+      const card = document.createElement('div'); card.className='mitra-product-card';
+      const imgEl = createImageElement(resolveImage(p), p.nama||p.name||p.product_name||'Produk');
+      const body = document.createElement('div'); body.className='card-body';
+      const titleP = document.createElement('div'); titleP.className='title'; titleP.textContent = p.nama||p.name||p.product_name||'Produk';
+      const subtitle = document.createElement('div'); subtitle.className='subtitle'; subtitle.textContent = p.kategori||p.category||p.product_category||String(p.deskripsi||p.description||'').slice(0, 40) || 'Menu favorit dari mitra ini';
+      const price = document.createElement('div'); price.className='price'; price.textContent = formatRupiah(p.harga||p.price||p.price_sell||0);
+      const actions = document.createElement('div'); actions.className='card-actions';
+      const orderBtn = document.createElement('button'); orderBtn.className='btn primary'; orderBtn.textContent='Lihat';
+      orderBtn.addEventListener('click', ()=>openDetail(p));
+      actions.appendChild(orderBtn);
+      body.appendChild(titleP);
+      body.appendChild(subtitle);
+      body.appendChild(price);
+      body.appendChild(actions);
+      card.appendChild(imgEl);
+      card.appendChild(body);
+      grid.appendChild(card);
+    });
+  }
   mitraDetailContent.appendChild(wrapper);
   mitraDetailContent.appendChild(title);
   mitraDetailContent.appendChild(grid);
