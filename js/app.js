@@ -50,6 +50,7 @@ searchInput.addEventListener('input', ()=>{
 });
 
 function formatRupiah(n){
+  n = Number(n) || 0;
   return 'Rp '+n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
@@ -102,28 +103,64 @@ function getActiveCategory(){
   return el?el.dataset.cat:'';
 }
 
+function resolveImage(p){
+  // prefer explicit image fields, then try img/ folder, otherwise placeholder
+  const possible = [p.image, p.gambar, p.photo, p.foto, p.img, p.thumbnail];
+  for(const val of possible){
+    if(val && typeof val==='string' && val.trim()!==''){
+      // if value looks like a URL or path
+      return val.startsWith('http') ? val : (val.startsWith('/') ? val : './img/' + val);
+    }
+  }
+  // fallback to product-specific field like 'picture' or none
+  return p.image_url || p.url || './img/taplak.jpg' || 'https://via.placeholder.com/400x300?text=Produk';
+}
+
+function createImageElement(src, alt){
+  const img = document.createElement('img');
+  img.className = 'loading';
+  img.src = src;
+  img.alt = alt||'';
+  img.addEventListener('load', ()=>{
+    img.classList.remove('loading');
+  });
+  img.addEventListener('error', ()=>{
+    // fallback to local placeholder
+    img.src = './img/taplak.jpg';
+    img.classList.remove('loading');
+  });
+  return img;
+}
+
 function renderProducts(){
   const q = searchInput.value.trim().toLowerCase();
   const activeCat = getActiveCategory();
   productListEl.innerHTML = '';
-  let list = products.slice();
+  let list = Array.isArray(products) ? products.slice() : [];
   if(activeCat){
     list = list.filter(p=>{
       return (p.category_id && p.category_id.toString()===activeCat.toString()) || (p.category && p.category.toString()===activeCat.toString()) || (p.product_category && p.product_category.toString()===activeCat.toString())
     });
   }
   if(q){
-    list = list.filter(p=> (p.nama||p.name||p.product_name||'').toLowerCase().includes(q) || (p.deskripsi||p.description||'').toLowerCase().includes(q));
+    list = list.filter(p=> (String(p.nama||p.name||p.product_name||'').toLowerCase().includes(q) || String(p.deskripsi||p.description||'').toLowerCase().includes(q)));
   }
 
   list.forEach(p=>{
     const card = document.createElement('div');
     card.className = 'card';
-    card.innerHTML = `
-      <img src="${p.image || p.gambar || 'https://via.placeholder.com/300'}" alt="${p.nama||p.name||''}" />
-      <div class="title">${p.nama||p.name||p.product_name||'Produk'}</div>
-      <div class="price">${formatRupiah(Number(p.harga||p.price||p.price_sell||0))}</div>
-    `;
+    const imgSrc = resolveImage(p);
+    const imgEl = createImageElement(imgSrc, p.nama||p.name||'Produk');
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.textContent = p.nama||p.name||p.product_name||'Produk';
+    const price = document.createElement('div');
+    price.className = 'price';
+    price.textContent = formatRupiah(p.harga||p.price||p.price_sell||0);
+
+    card.appendChild(imgEl);
+    card.appendChild(title);
+    card.appendChild(price);
     card.addEventListener('click', ()=>openDetail(p));
     productListEl.appendChild(card);
   });
@@ -131,25 +168,23 @@ function renderProducts(){
 
 function openDetail(p){
   setActiveView('detailView');
-  detailContent.innerHTML = `
-    <div class="detail-content">
-      <img src="${p.image || p.gambar || 'https://via.placeholder.com/500'}" alt="" style="width:100%;border-radius:8px;max-height:300px;object-fit:cover" />
-      <h3>${p.nama||p.name||p.product_name||'Produk'}</h3>
-      <div class="price">${formatRupiah(Number(p.harga||p.price||0))}</div>
-      <p>${p.deskripsi||p.description||'Tidak ada deskripsi.'}</p>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="addToCartBtn" class="btn primary">Tambah ke Keranjang</button>
-        <button id="backBtn" class="btn">Tutup</button>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('addToCartBtn').addEventListener('click', ()=>{
-    addToCart(p);
-  });
-  document.getElementById('backBtn').addEventListener('click', ()=>{
-    setActiveView('homeView');
-  });
+  const imgSrc = resolveImage(p);
+  detailContent.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'detail-content';
+  const img = createImageElement(imgSrc, p.nama||p.name||'Produk');
+  img.style.maxHeight = '300px'; img.style.width = '100%'; img.style.objectFit = 'cover'; img.style.borderRadius = '8px';
+  const h3 = document.createElement('h3'); h3.textContent = p.nama||p.name||p.product_name||'Produk';
+  const pr = document.createElement('div'); pr.className='price'; pr.textContent = formatRupiah(p.harga||p.price||0);
+  const desc = document.createElement('p'); desc.textContent = p.deskripsi||p.description||'Tidak ada deskripsi.';
+  const actions = document.createElement('div'); actions.style.display='flex'; actions.style.gap='8px'; actions.style.marginTop='8px';
+  const addBtn = document.createElement('button'); addBtn.className='btn primary'; addBtn.textContent='Tambah ke Keranjang';
+  const closeBtn = document.createElement('button'); closeBtn.className='btn'; closeBtn.textContent='Tutup';
+  addBtn.addEventListener('click', ()=>addToCart(p));
+  closeBtn.addEventListener('click', ()=>setActiveView('homeView'));
+  actions.appendChild(addBtn); actions.appendChild(closeBtn);
+  wrapper.appendChild(img); wrapper.appendChild(h3); wrapper.appendChild(pr); wrapper.appendChild(desc); wrapper.appendChild(actions);
+  detailContent.appendChild(wrapper);
 }
 
 function addToCart(p){
@@ -160,9 +195,9 @@ function addToCart(p){
     cart.push({
       id: p.id || p.id_produk || (new Date()).getTime(),
       nama: p.nama||p.name||p.product_name||'Produk',
-      price: Number(p.harga||p.price||0),
+      price: Number(p.harga||p.price||0) || 0,
       qty: 1,
-      image: p.image || p.gambar || 'https://via.placeholder.com/200'
+      image: resolveImage(p)
     });
   }
   saveCart();
