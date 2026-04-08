@@ -14,6 +14,10 @@
       <div class="search">
         <input id="searchInput" type="search" placeholder="Cari produk..." />
       </div>
+      <!-- Mitra button -->
+      <div>
+        <button id="openMitra" class="btn">Mitra</button>
+      </div>
     </header>
 
     <!-- Views -->
@@ -49,6 +53,18 @@
           <div class="total">Total: <span id="cartTotal">Rp 0</span></div>
           <button id="checkoutBtn" class="btn primary">Checkout</button>
         </div>
+      </section>
+
+      <!-- Mitra List View -->
+      <section id="mitraView" class="view">
+        <h2>Mitra</h2>
+        <div id="mitraList" class="mitra-list"></div>
+      </section>
+
+      <!-- Mitra Detail View -->
+      <section id="mitraDetailView" class="view">
+        <button id="backToMitra" class="btn-back">‹ Kembali</button>
+        <div id="mitraDetailContent" class="detail-content"></div>
       </section>
 
       <!-- Profile View -->

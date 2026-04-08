@@ -57,3 +57,8 @@ body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:40px;backgr
   .product-list{grid-template-columns:repeat(3,1fr)}
   .search input{width:320px}
 }
+.mitra-list{display:grid;gap:10px}
+.mitra-card{display:flex;gap:10px;align-items:center;background:var(--card);padding:10px;border-radius:12px;box-shadow:var(--shadow);cursor:pointer}
+.mitra-card img{width:64px;height:64px;object-fit:cover;border-radius:10px}
+.mitra-info .title{font-weight:800}
+.mitra-info .subtitle{color:var(--muted);font-size:13px}

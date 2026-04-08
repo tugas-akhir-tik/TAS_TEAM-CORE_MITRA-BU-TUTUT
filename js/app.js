@@ -22,6 +22,12 @@ const cartCountEl = document.getElementById('cartCount');
 const checkoutBtn = document.getElementById('checkoutBtn');
 const openCategoriesBtn = document.getElementById('openCategories');
 
+// Mitra views
+const mitraListEl = document.getElementById('mitraList');
+const mitraDetailContent = document.getElementById('mitraDetailContent');
+const openMitraBtn = document.getElementById('openMitra');
+const backToMitra = document.getElementById('backToMitra');
+
 function setActiveView(id){
   views.forEach(v=>v.classList.toggle('active', v.id===id));
   navBtns.forEach(b=>b.classList.toggle('active', b.dataset.view===id));
@@ -68,6 +74,7 @@ async function loadData(){
   }
   renderCategories();
   renderProducts();
+  renderMitraList();
 }
 
 function renderCategories(){
@@ -353,6 +360,62 @@ function renderOrders(){
   if(!orders || orders.length===0){el.innerHTML = 'Belum ada pesanan.';return}
   el.innerHTML = orders.map(o=>`<div style="background:#fff;padding:8px;border-radius:8px;margin-bottom:8px"><b>${o.id}</b><div>${new Date(o.date).toLocaleString()}</div><div>Total: ${formatRupiah(o.total)}</div></div>`).join('');
 }
+
+// Mitra functions
+function renderMitraList(){
+  if(!mitraListEl) return;
+  mitraListEl.innerHTML = '';
+  const list = Array.isArray(mitra) ? mitra : [];
+  list.forEach(m=>{
+    const card = document.createElement('div');
+    card.className = 'mitra-card';
+    const imgSrc = resolveImage(m) || './img/taplak.jpg';
+    const img = createImageElement(imgSrc, m.nama || m.name || 'Mitra');
+    img.style.width='64px'; img.style.height='64px'; img.style.borderRadius='10px';
+    const info = document.createElement('div'); info.className='mitra-info';
+    const t = document.createElement('div'); t.className='title'; t.textContent = m.nama || m.name || 'Mitra';
+    const s = document.createElement('div'); s.className='subtitle'; s.textContent = m.alamat || m.address || m.keterangan || '';
+    info.appendChild(t); info.appendChild(s);
+    card.appendChild(img); card.appendChild(info);
+    card.addEventListener('click', ()=>openMitraDetail(m));
+    mitraListEl.appendChild(card);
+  });
+}
+
+function openMitraDetail(m){
+  setActiveView('mitraDetailView');
+  mitraDetailContent.innerHTML = '';
+  const wrapper = document.createElement('div'); wrapper.className='detail-content';
+  const img = createImageElement(resolveImage(m), m.nama||m.name||'Mitra'); img.style.width='100%'; img.style.height='160px'; img.style.objectFit='cover'; img.style.borderRadius='8px';
+  const h3 = document.createElement('h3'); h3.textContent = m.nama || m.name || 'Mitra';
+  const addr = document.createElement('div'); addr.textContent = m.alamat || m.address || '';
+  const desc = document.createElement('p'); desc.textContent = m.keterangan || m.description || '';
+  wrapper.appendChild(img); wrapper.appendChild(h3); wrapper.appendChild(addr); wrapper.appendChild(desc);
+
+  // show products from this mitra
+  const related = products.filter(p=> (p.mitra_id && (p.mitra_id==m.id || p.mitra_id==m.id_mitra)) || (p.id_mitra && (p.id_mitra==m.id || p.id_mitra==m.id_mitra)) || (p.mitra && (p.mitra==m.nama || p.mitra==m.name)) );
+  const title = document.createElement('div'); title.className='section-title'; title.textContent='Produk dari Mitra';
+  const grid = document.createElement('div'); grid.className='product-list';
+  related.forEach(p=>{
+    const card = document.createElement('div'); card.className='card';
+    const imgEl = createImageElement(resolveImage(p));
+    const titleP = document.createElement('div'); titleP.className='title'; titleP.textContent = p.nama||p.name||'Produk';
+    const price = document.createElement('div'); price.className='price'; price.textContent = formatRupiah(p.harga||p.price||0);
+    card.appendChild(imgEl); card.appendChild(titleP); card.appendChild(price);
+    card.addEventListener('click', ()=>openDetail(p));
+    grid.appendChild(card);
+  });
+
+  mitraDetailContent.appendChild(wrapper);
+  mitraDetailContent.appendChild(title);
+  mitraDetailContent.appendChild(grid);
+
+  // observe new cards
+  observeCards();
+}
+
+if(openMitraBtn) openMitraBtn.addEventListener('click', ()=>{ setActiveView('mitraView'); renderMitraList(); });
+if(backToMitra) backToMitra.addEventListener('click', ()=>{ setActiveView('mitraView'); });
 
 // init
 loadCart();
