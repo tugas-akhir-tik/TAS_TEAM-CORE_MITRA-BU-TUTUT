@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mitra Kantin Bu Tutut - Mobile</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">Bu Tutut</div>
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="Cari produk..." />
+      </div>
+    </header>
+
+    <!-- Views -->
+    <main>
+      <!-- Home View -->
+      <section id="homeView" class="view active">
+        <div class="banner">
+          <img src="https://via.placeholder.com/800x250?text=Promo+Bu+Tutut" alt="Banner promo" />
+        </div>
+
+        <div class="section-title">Kategori</div>
+        <div id="categories" class="categories"></div>
+
+        <div class="section-title">Produk</div>
+        <div id="productList" class="product-list"></div>
+      </section>
+
+      <!-- Detail View -->
+      <section id="detailView" class="view">
+        <button id="backToHome" class="btn-back">‹ Kembali</button>
+        <div id="detailContent" class="detail-content"></div>
+      </section>
+
+      <!-- Cart View -->
+      <section id="cartView" class="view">
+        <h2>Keranjang</h2>
+        <div id="cartList" class="cart-list"></div>
+        <div class="cart-footer">
+          <div class="total">Total: <span id="cartTotal">Rp 0</span></div>
+          <button id="checkoutBtn" class="btn primary">Checkout</button>
+        </div>
+      </section>
+
+      <!-- Profile View -->
+      <section id="profileView" class="view">
+        <h2>Profil</h2>
+        <div class="profile-card">
+          <div class="avatar">BT</div>
+          <div>
+            <div class="name">Nama Pengguna</div>
+            <div class="email">user@example.com</div>
+          </div>
+        </div>
+
+        <div class="section-title">Riwayat Pesanan</div>
+        <div id="ordersList">Belum ada pesanan.</div>
+      </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-view="homeView">Home</button>
+      <button class="nav-btn" data-view="homeView" id="openCategories">Kategori</button>
+      <button class="nav-btn" data-view="cartView">Keranjang <span id="cartCount" class="badge">0</span></button>
+      <button class="nav-btn" data-view="profileView">Profil</button>
+    </nav>
+  </div>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>
