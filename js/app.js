@@ -72,7 +72,13 @@ function formatRupiah(n){
 function normalizePrice(value){
   if (value == null) return 0;
   if (typeof value === 'number') return value;
-  const str = String(value).replace(/[^0-9,\.]/g, '').replace(/,/g, '.');
+  let str = String(value).trim();
+  // Jika ada "/", ambil bagian sebelum "/" (misal "2.000/3 pcs" -> "2.000")
+  if (str.includes('/')) {
+    str = str.split('/')[0].trim();
+  }
+  // Hapus karakter non-angka kecuali titik dan koma
+  str = str.replace(/[^0-9,\.]/g, '').replace(/,/g, '.');
   const num = Number(str);
   return Number.isFinite(num) ? num : 0;
 }
@@ -87,7 +93,9 @@ function getProductCategoryId(p){
 }
 function getProductDescription(p){
   const desc = p.deskripsi || p.description || p.produk_stock || p.keterangan || p.sekolah || '';
-  return desc || 'Deskripsi belum tersedia.';
+  const stock = p.produk_stock || p.stock || '';
+  const priceNote = p.produk_price && p.produk_price.includes('/') ? ` (${p.produk_price.split('/')[1].trim()})` : '';
+  return (desc || stock ? `${desc || stock}${priceNote}` : 'Deskripsi belum tersedia.');
 }
 function loadJSON(path){
   return fetch(path).then(r=>r.json());
