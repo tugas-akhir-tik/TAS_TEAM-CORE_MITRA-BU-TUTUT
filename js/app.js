@@ -77,8 +77,10 @@ function normalizePrice(value){
   if (str.includes('/')) {
     str = str.split('/')[0].trim();
   }
-  // Hapus karakter non-angka kecuali titik dan koma
-  str = str.replace(/[^0-9,\.]/g, '').replace(/,/g, '.');
+  // Hapus karakter non-angka kecuali koma (untuk desimal jika ada)
+  str = str.replace(/[^0-9,]/g, '');
+  // Jika ada koma, ganti dengan titik untuk desimal
+  str = str.replace(/,/g, '.');
   const num = Number(str);
   return Number.isFinite(num) ? num : 0;
 }
