@@ -69,7 +69,26 @@ function formatRupiah(n){
   n = Number(n) || 0;
   return 'Rp '+n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
-
+function normalizePrice(value){
+  if (value == null) return 0;
+  if (typeof value === 'number') return value;
+  const str = String(value).replace(/[^0-9,\.]/g, '').replace(/,/g, '.');
+  const num = Number(str);
+  return Number.isFinite(num) ? num : 0;
+}
+function getProductTitle(p){
+  return p.produk_name || p.nama || p.name || p.product_name || 'Produk';
+}
+function getProductPrice(p){
+  return normalizePrice(p.produk_price || p.harga || p.price || p.price_sell || 0);
+}
+function getProductCategoryId(p){
+  return String(p.produk_category || p.category_id || p.category || p.product_category || p.kategori || '').trim();
+}
+function getProductDescription(p){
+  const desc = p.deskripsi || p.description || p.produk_stock || p.keterangan || p.sekolah || '';
+  return desc || 'Deskripsi belum tersedia.';
+}
 function loadJSON(path){
   return fetch(path).then(r=>r.json());
 }
@@ -115,8 +134,8 @@ function renderCategories(){
   }
 
   list.forEach((cat, idx)=>{
-    const label = cat.nama||cat.name||cat.kategori||cat.title||cat.category||`Kategori ${idx+1}`;
-    const id = String(cat.id||cat.category_id||cat.id_category||label);
+    const label = cat.category||cat.nama||cat.name||cat.kategori||cat.title||`Kategori ${idx+1}`;
+    const id = String(cat.id||cat.category_id||cat.id_category||cat.category||cat.nama||cat.name||cat.kategori||cat.title||idx);
 
     const homeCard = document.createElement('div');
     homeCard.className = 'category';
@@ -147,7 +166,7 @@ function renderCategoryProducts(){
   let list = Array.isArray(products) ? products.slice() : [];
   if(activeCat){
     list = list.filter(p=>{
-      return (p.category_id && p.category_id.toString()===activeCat.toString()) || (p.category && p.category.toString()===activeCat.toString()) || (p.product_category && p.product_category.toString()===activeCat.toString()) || (p.kategori && p.kategori.toString()===activeCat.toString());
+      return (p.produk_category && p.produk_category.toString()===activeCat.toString()) || (p.category_id && p.category_id.toString()===activeCat.toString()) || (p.category && p.category.toString()===activeCat.toString()) || (p.product_category && p.product_category.toString()===activeCat.toString()) || (p.kategori && p.kategori.toString()===activeCat.toString());
     });
   }
 
@@ -170,13 +189,13 @@ function renderCategoryProducts(){
     card.setAttribute('data-index', idx);
     card.style.animationDelay = `${idx * 0.1}s`; // Staggered animation
     const imgSrc = resolveImage(p);
-    const imgEl = createImageElement(imgSrc, p.nama||p.name||p.product_name||'Produk');
+    const imgEl = createImageElement(imgSrc, getProductTitle(p));
     const title = document.createElement('div');
     title.className = 'title';
-    title.textContent = p.nama||p.name||p.product_name||'Produk';
+    title.textContent = getProductTitle(p);
     const price = document.createElement('div');
     price.className = 'price';
-    price.textContent = formatRupiah(p.harga||p.price||p.price_sell||0);
+    price.textContent = formatRupiah(getProductPrice(p));
 
     card.appendChild(imgEl);
     card.appendChild(title);
@@ -213,6 +232,16 @@ async function loadData(){
     categories = normalizeData(rawCategories);
     mitra = normalizeData(rawMitra);
 
+    if(categories.length === 0 && products.length > 0){
+      const categoryMap = {};
+      products.forEach(p=>{
+        const id = getProductCategoryId(p) || String(p.produk_category || p.category || p.product_category || p.kategori || '');
+        const label = p.produk_category ? p.produk_category : p.category || p.product_category || p.kategori || 'Lainnya';
+        if(id) categoryMap[id] = categoryMap[id] || {id, category: label};
+      });
+      categories = Object.values(categoryMap);
+    }
+
     console.info('Data loaded:', {products: products.length, categories: categories.length, mitra: mitra.length});
 
     if(products.length===0){
@@ -238,11 +267,16 @@ function renderProducts(){
   let list = Array.isArray(products) ? products.slice() : [];
   if(activeCat){
     list = list.filter(p=>{
-      return (p.category_id && p.category_id.toString()===activeCat.toString()) || (p.category && p.category.toString()===activeCat.toString()) || (p.product_category && p.product_category.toString()===activeCat.toString())
+      const catId = getProductCategoryId(p);
+      return catId === activeCat || String(p.category_id||'') === activeCat || String(p.category||'') === activeCat || String(p.product_category||'') === activeCat;
     });
   }
   if(q){
-    list = list.filter(p=> (String(p.nama||p.name||p.product_name||'').toLowerCase().includes(q) || String(p.deskripsi||p.description||'').toLowerCase().includes(q)));
+    list = list.filter(p=> {
+      const text = String(p.produk_name||p.nama||p.name||p.product_name||'').toLowerCase();
+      const detail = String(p.deskripsi||p.description||p.produk_stock||p.sekolah||'').toLowerCase();
+      return text.includes(q) || detail.includes(q);
+    });
   }
 
   if(list.length===0){
@@ -255,13 +289,13 @@ function renderProducts(){
     card.className = 'card';
     card.setAttribute('data-index', idx);
     const imgSrc = resolveImage(p);
-    const imgEl = createImageElement(imgSrc, p.nama||p.name||'Produk');
+    const imgEl = createImageElement(imgSrc, getProductTitle(p));
     const title = document.createElement('div');
     title.className = 'title';
-    title.textContent = p.nama||p.name||p.product_name||'Produk';
+    title.textContent = getProductTitle(p);
     const price = document.createElement('div');
     price.className = 'price';
-    price.textContent = formatRupiah(p.harga||p.price||p.price_sell||0);
+    price.textContent = formatRupiah(getProductPrice(p));
 
     card.appendChild(imgEl);
     card.appendChild(title);
@@ -275,8 +309,8 @@ function renderProducts(){
 }
 
 function resolveImage(p){
-  // try many common fields and shapes used by APIs / Supabase
-  const possibleKeys = ['image','gambar','photo','foto','img','thumbnail','picture','image_url','url','public_url','file','gambar_url'];
+  // try many common fields and shapes used by APIs / Supabase / Mitra Kantin Bu Tutut
+  const possibleKeys = ['image','gambar','photo','foto','img','thumbnail','picture','image_url','url','public_url','file','gambar_url','produk_image','product_image','image_url','photo_url'];
 
   function normalizeVal(val){
     if(!val) return null;
@@ -385,12 +419,12 @@ function renderCart(){
   let total = 0;
   cart.forEach((item, idx)=>{
     const row = document.createElement('div'); row.className='cart-item';
-    const img = createImageElement(resolveImage(item), item.nama||item.name||item.product_name||'Produk');
+    const img = createImageElement(resolveImage(item), getProductTitle(item));
     img.style.width='64px'; img.style.height='64px'; img.style.borderRadius='10px';
     const info = document.createElement('div'); info.style.flex='1';
-    const title = document.createElement('div'); title.className='title'; title.textContent = item.nama||item.name||item.product_name||'Produk';
+    const title = document.createElement('div'); title.className='title'; title.textContent = getProductTitle(item);
     const qty = document.createElement('div'); qty.textContent = `x${item.qty||1}`;
-    const price = document.createElement('div'); price.className='price'; price.textContent = formatRupiah((item.harga||item.price||item.price_sell||0) * (item.qty||1));
+    const price = document.createElement('div'); price.className='price'; price.textContent = formatRupiah((item.price||getProductPrice(item)) * (item.qty||1));
     info.appendChild(title); info.appendChild(qty); info.appendChild(price);
     const removeBtn = document.createElement('button'); removeBtn.className='btn'; removeBtn.textContent='Hapus';
     removeBtn.addEventListener('click', ()=>{
@@ -401,21 +435,23 @@ function renderCart(){
     });
     row.appendChild(img); row.appendChild(info); row.appendChild(removeBtn);
     cartListEl.appendChild(row);
-    total += (item.harga||item.price||item.price_sell||0) * (item.qty||1);
+    total += (item.price || getProductPrice(item)) * (item.qty||1);
   });
   cartTotalEl.textContent = formatRupiah(total);
   cartCountEl.textContent = cart.reduce((sum, x)=>sum+(x.qty||1),0);
 }
 
 function addToCart(product){
-  const found = cart.find(item=> item.id === product.id || item.id === product.id_produk || item.id === product.product_id || item.name === product.name || item.nama === product.nama);
+  const productId = product.produk_id || product.id || product.product_id || product.id_produk || getProductTitle(product);
+  const found = cart.find(item=> item.id === productId);
   if(found){
     found.qty = (found.qty||1) + 1;
   } else {
     cart.push({
       ...product,
       qty: 1,
-      price: Number(product.harga||product.price||product.price_sell||0)
+      price: getProductPrice(product),
+      id: productId
     });
   }
   saveCart();
@@ -425,58 +461,13 @@ function addToCart(product){
 }
 
 // banner parallax on scroll
-const mainEl = document.querySelector('main');
-mainEl.addEventListener('scroll', ()=>{
+window.addEventListener('scroll', ()=>{
   const banner = document.querySelector('.banner');
   if(!banner) return;
   const scrolled = Math.min(1, window.scrollY / 120);
   if(scrolled>0.02) banner.classList.add('scrolled'); else banner.classList.remove('scrolled');
 });
 
-// modify renderProducts to call observeCards
-function renderProducts(){
-  const q = searchInput.value.trim().toLowerCase();
-  const activeCat = getActiveCategory();
-  if(!productListEl) return;
-  productListEl.innerHTML = '';
-  let list = Array.isArray(products) ? products.slice() : [];
-  if(activeCat){
-    list = list.filter(p=>{
-      return (p.category_id && p.category_id.toString()===activeCat.toString()) || (p.category && p.category.toString()===activeCat.toString()) || (p.product_category && p.product_category.toString()===activeCat.toString())
-    });
-  }
-  if(q){
-    list = list.filter(p=> (String(p.nama||p.name||p.product_name||'').toLowerCase().includes(q) || String(p.deskripsi||p.description||'').toLowerCase().includes(q)));
-  }
-
-  if(list.length===0){
-    productListEl.innerHTML = '<div style="padding:18px;text-align:center;color:#666">Tidak ada produk.</div>';
-    return;
-  }
-
-  list.forEach((p, idx)=>{
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.setAttribute('data-index', idx);
-    const imgSrc = resolveImage(p);
-    const imgEl = createImageElement(imgSrc, p.nama||p.name||'Produk');
-    const title = document.createElement('div');
-    title.className = 'title';
-    title.textContent = p.nama||p.name||p.product_name||'Produk';
-    const price = document.createElement('div');
-    price.className = 'price';
-    price.textContent = formatRupiah(p.harga||p.price||p.price_sell||0);
-
-    card.appendChild(imgEl);
-    card.appendChild(title);
-    card.appendChild(price);
-    card.addEventListener('click', ()=>openDetail(p));
-    productListEl.appendChild(card);
-  });
-
-  // observe newly added cards for reveal animation
-  observeCards();
-}
 
 function openDetail(p){
   setActiveView('detailView');
@@ -484,11 +475,11 @@ function openDetail(p){
   detailContent.innerHTML = '';
   const wrapper = document.createElement('div');
   wrapper.className = 'detail-content';
-  const img = createImageElement(imgSrc, p.nama||p.name||'Produk');
+  const img = createImageElement(imgSrc, getProductTitle(p));
   img.style.maxHeight = '300px'; img.style.width = '100%'; img.style.objectFit = 'cover'; img.style.borderRadius = '8px';
-  const h3 = document.createElement('h3'); h3.textContent = p.nama||p.name||p.product_name||'Produk';
-  const pr = document.createElement('div'); pr.className='price'; pr.textContent = formatRupiah(p.harga||p.price||0);
-  const desc = document.createElement('p'); desc.textContent = p.deskripsi||p.description||'Tidak ada deskripsi.';
+  const h3 = document.createElement('h3'); h3.textContent = getProductTitle(p);
+  const pr = document.createElement('div'); pr.className='price'; pr.textContent = formatRupiah(getProductPrice(p));
+  const desc = document.createElement('p'); desc.textContent = getProductDescription(p);
   const actions = document.createElement('div'); actions.style.display='flex'; actions.style.gap='8px'; actions.style.marginTop='8px';
   const addBtn = document.createElement('button'); addBtn.className='btn primary'; addBtn.textContent='Tambah ke Keranjang';
   const closeBtn = document.createElement('button'); closeBtn.className='btn'; closeBtn.textContent='Tutup';
@@ -533,11 +524,11 @@ function renderMitraList(){
     const card = document.createElement('div');
     card.className = 'mitra-card';
     const imgSrc = resolveImage(m) || './img/taplak.jpg';
-    const img = createImageElement(imgSrc, m.nama || m.name || 'Mitra');
+    const img = createImageElement(imgSrc, m.mitra_name || m.nama || m.name || 'Mitra');
     img.style.width='64px'; img.style.height='64px'; img.style.borderRadius='10px';
     const info = document.createElement('div'); info.className='mitra-info';
-    const t = document.createElement('div'); t.className='title'; t.textContent = m.nama || m.name || 'Mitra';
-    const s = document.createElement('div'); s.className='subtitle'; s.textContent = m.alamat || m.address || m.keterangan || '';
+    const t = document.createElement('div'); t.className='title'; t.textContent = m.mitra_name || m.nama || m.name || 'Mitra';
+    const s = document.createElement('div'); s.className='subtitle'; s.textContent = m.address_owner || m.alamat || m.address || m.keterangan || '';
     info.appendChild(t); info.appendChild(s);
     card.appendChild(img); card.appendChild(info);
     card.addEventListener('click', ()=>openMitraDetail(m));
@@ -549,8 +540,8 @@ function openMitraDetail(m){
   setActiveView('mitraDetailView');
   mitraDetailContent.innerHTML = '';
   const wrapper = document.createElement('div'); wrapper.className='detail-content mitra-detail-card';
-  const img = createImageElement(resolveImage(m), m.nama||m.name||'Mitra'); img.style.width='100%'; img.style.height='180px'; img.style.objectFit='cover'; img.style.borderRadius='16px';
-  const h3 = document.createElement('h3'); h3.textContent = m.nama || m.name || 'Mitra';
+  const img = createImageElement(resolveImage(m), m.mitra_name||m.nama||m.name||'Mitra'); img.style.width='100%'; img.style.height='180px'; img.style.objectFit='cover'; img.style.borderRadius='16px';
+  const h3 = document.createElement('h3'); h3.textContent = m.mitra_name || m.nama || m.name || 'Mitra';
   const meta = document.createElement('div'); meta.className='mitra-detail-meta';
   const badge = document.createElement('span'); badge.className='mitra-badge'; badge.textContent = m.rating ? `${m.rating.toFixed(1)} ★` : 'Mitra Unggulan';
   const location = document.createElement('span'); location.className='subtitle'; location.textContent = m.alamat || m.address || 'Lokasi mitra tidak tersedia';
@@ -559,7 +550,12 @@ function openMitraDetail(m){
   wrapper.appendChild(img); wrapper.appendChild(h3); wrapper.appendChild(meta); wrapper.appendChild(desc);
 
   // show products from this mitra
-  const related = products.filter(p=> (p.mitra_id && (p.mitra_id==m.id || p.mitra_id==m.id_mitra)) || (p.id_mitra && (p.id_mitra==m.id || p.id_mitra==m.id_mitra)) || (p.mitra && (p.mitra==m.nama || p.mitra==m.name)) );
+  const related = products.filter(p=> {
+    const productMitra = p.mitra_id || p.id_mitra || p.mitra || p.mitra_name;
+    const mitraIds = [m.id, m.id_mitra, m.mitra_id].filter(Boolean).map(String);
+    const mitraNames = [m.mitra_name, m.nama, m.name].filter(Boolean).map(String);
+    return (productMitra && mitraIds.includes(String(productMitra))) || mitraNames.includes(String(productMitra));
+  });
   const title = document.createElement('div'); title.className='section-title'; title.textContent='Menu Pilihan dari Mitra';
   const grid = document.createElement('div'); grid.className='mitra-menu-grid';
 
@@ -570,11 +566,11 @@ function openMitraDetail(m){
   } else {
     related.forEach((p, idx)=>{
       const card = document.createElement('div'); card.className='mitra-product-card';
-      const imgEl = createImageElement(resolveImage(p), p.nama||p.name||p.product_name||'Produk');
+      const imgEl = createImageElement(resolveImage(p), getProductTitle(p));
       const body = document.createElement('div'); body.className='card-body';
-      const titleP = document.createElement('div'); titleP.className='title'; titleP.textContent = p.nama||p.name||p.product_name||'Produk';
+      const titleP = document.createElement('div'); titleP.className='title'; titleP.textContent = getProductTitle(p);
       const subtitle = document.createElement('div'); subtitle.className='subtitle'; subtitle.textContent = p.kategori||p.category||p.product_category||String(p.deskripsi||p.description||'').slice(0, 40) || 'Menu favorit dari mitra ini';
-      const price = document.createElement('div'); price.className='price'; price.textContent = formatRupiah(p.harga||p.price||p.price_sell||0);
+      const price = document.createElement('div'); price.className='price'; price.textContent = formatRupiah(getProductPrice(p));
       const actions = document.createElement('div'); actions.className='card-actions';
       const orderBtn = document.createElement('button'); orderBtn.className='btn primary'; orderBtn.textContent='Lihat';
       orderBtn.addEventListener('click', ()=>openDetail(p));
